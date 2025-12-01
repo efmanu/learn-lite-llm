@@ -1,0 +1,42 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15
+    container_name: litellm-postgres
+    environment:
+      - POSTGRES_DB=postgres
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  litellm:
+    image: ghcr.io/berriai/litellm:main-latest
+    container_name: litellm-server
+    ports:
+      - "4000:4000"
+    environment:
+      - LITELLM_MASTER_KEY=sk-1234
+      - LITELLM_SALT_KEY=sk-1234567890abcdef
+      - LITELLM_LOG=INFO
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/postgres
+      - STORE_MODEL_IN_DB=True
+      - DEEPSEEK_API_KEY=${DEEPSEEK_API_KEY}
+    command: --port 4000 --config /app/config.yaml
+    volumes:
+      - ./litellm_config.yaml:/app/config.yaml
+    restart: unless-stopped
+    depends_on:
+      - postgres
+
+volumes:
+  postgres_data:
